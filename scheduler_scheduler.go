@@ -64,3 +64,39 @@ func (s *Scheduler) ScheduleTask(task *Task) {
 }
 
 // Other methods can be added as needed, such as updating node status, handling failed tasks, etc.
+// HandleFailedTask handles a task that has failed on a given node
+func (s *Scheduler) HandleFailedTask(taskID string, failedNodeID string) {
+    s.mu.Lock()
+    defer s.mu.Unlock()
+
+    // Find the task and the node on which it failed
+    var failedTask *Task
+    var failedTaskIndex int
+    var failedNode *node.Node
+    for _, n := range s.Nodes {
+        if n.ID == failedNodeID {
+            failedNode = n
+            for i, t := range n.Tasks {
+                if t.ID == taskID {
+                    failedTask = t
+                    failedTaskIndex = i
+                    break
+                }
+            }
+            break
+        }
+    }
+
+    if failedTask == nil {
+        // Task or Node not found
+        return
+    }
+
+    // Remove the failed task from the failed node
+    failedNode.Tasks = append(failedNode.Tasks[:failedTaskIndex], failedNode.Tasks[failedTaskIndex+1:]...)
+
+    // Optionally, re-schedule the failed task to another node
+    // This can be as simple as calling ScheduleTask again,
+    // or involve more complex logic based on the failure reason, task type, etc.
+    s.ScheduleTask(failedTask)
+}
